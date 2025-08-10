@@ -1,101 +1,90 @@
 # Dubernetes Architecture
 
 ## Overview
-Dubernetes is a simplified container orchestration system designed for learning how orchestration works behind the scenes.
+Dubernetes is an ultra-simplified container orchestration system designed for learning how basic orchestration works behind the scenes.
 
 ## Architecture Diagram
 
 ```mermaid
 graph TB
-    subgraph "Dubernetes Control Plane"
-        API["API Server<br/>(REST endpoints)"]
-        SCHED["Scheduler<br/>(Pod → Node assignment)"]
-        CTRL["Controller Manager<br/>(Deployment reconciliation)"]
-        STORE["State Store<br/>(JSON/SQLite)"]
+    CLI["CLI<br/>(dub command)"]
+    ORCH["Orchestrator<br/>(single process)"]
+    DOCKER["Docker"]
+    
+    subgraph "Running Pods"
+        POD1["Pod: nginx"]
+        POD2["Pod: app"]
+        POD3["Pod: db"]
     end
     
-    subgraph "Single Node"
-        KUBELET["Node Agent<br/>(Pod lifecycle)"]
-        DOCKER["Container Runtime<br/>(Docker/containerd)"]
-        PROXY["Service Proxy<br/>(Load balancing)"]
-        
-        subgraph "Running Pods"
-            POD1["Pod 1<br/>app=web"]
-            POD2["Pod 2<br/>app=web"]
-            POD3["Pod 3<br/>app=db"]
-        end
-    end
+    CLI -->|dub run nginx| ORCH
+    CLI -->|dub expose nginx 8080| ORCH
+    CLI -->|dub list| ORCH
+    ORCH -->|docker run| DOCKER
+    DOCKER -->|creates/manages| POD1
+    DOCKER -->|creates/manages| POD2
+    DOCKER -->|creates/manages| POD3
+    ORCH -->|port forward :8080| POD1
     
-    subgraph "User Interface"
-        CLI["CLI Tool<br/>(kubectl-like)"]
-        DASH["Web Dashboard<br/>(Cluster view)"]
-    end
+    classDef cli fill:#e8f5e8
+    classDef orchestrator fill:#e1f5fe
+    classDef runtime fill:#fff3e0
+    classDef pods fill:#f3e5f5
     
-    %% User interactions
-    CLI -->|deploy, scale, expose| API
-    DASH -->|view cluster state| API
-    
-    %% Control plane flow
-    API -->|store state| STORE
-    API -->|trigger scheduling| SCHED
-    SCHED -->|assign pods| STORE
-    CTRL -->|watch desired state| STORE
-    CTRL -->|reconcile| API
-    
-    %% Node operations
-    API -->|pod specs| KUBELET
-    KUBELET -->|create/destroy| DOCKER
-    DOCKER -->|manage| POD1
-    DOCKER -->|manage| POD2
-    DOCKER -->|manage| POD3
-    
-    %% Service networking
-    API -->|service config| PROXY
-    PROXY -->|route traffic| POD1
-    PROXY -->|route traffic| POD2
-    
-    %% Feedback loop
-    KUBELET -->|pod status| API
-    
-    classDef controlPlane fill:#e1f5fe
-    classDef node fill:#f3e5f5
-    classDef ui fill:#e8f5e8
-    
-    class API,SCHED,CTRL,STORE controlPlane
-    class KUBELET,DOCKER,PROXY,POD1,POD2,POD3 node
-    class CLI,DASH ui
+    class CLI cli
+    class ORCH orchestrator
+    class DOCKER runtime
+    class POD1,POD2,POD3 pods
 ```
 
 ## Core Components
 
-### Control Plane
-- **API Server**: REST endpoints for all operations
-- **Scheduler**: Assigns pods to nodes based on resources
-- **Controller Manager**: Maintains desired state (deployments, replicas)
-- **State Store**: Persistent storage for cluster state
+### CLI Tool
+Simple command interface:
+- `dub run <name> --image <image>` - Deploy a pod
+- `dub expose <name> --port <port>` - Expose pod on host port
+- `dub list` - Show running pods
+- `dub stop <name>` - Stop a pod
 
-### Node Components
-- **Node Agent**: Manages pod lifecycle on the node
-- **Container Runtime**: Actually runs containers (Docker/containerd)
-- **Service Proxy**: Handles load balancing and service discovery
+### Orchestrator
+Single process that:
+- Manages pod lifecycle (create/stop/restart)
+- Handles port forwarding for services
+- Maintains in-memory state of running pods
+- Makes direct Docker API calls
 
-### User Interface
-- **CLI Tool**: kubectl-like interface for deployments
-- **Web Dashboard**: Visual representation of cluster state
+### Container Runtime
+Standard Docker for running containers
 
-## Key Learning Flow
+## Example Workflow
 
-1. **User creates Deployment** via CLI
-2. **API Server** stores desired state
-3. **Controller** notices gap between desired/actual state
-4. **Scheduler** assigns Pods to Node
-5. **Node Agent** creates containers
-6. **Service Proxy** handles load balancing
-7. **Dashboard** shows real-time state changes
+```bash
+# Deploy nginx pod
+dub run nginx --image nginx:latest
+
+# Expose it on port 8080
+dub expose nginx --port 8080
+
+# Access the service
+curl localhost:8080  # routes to nginx pod
+
+# See what's running
+dub list
+
+# Stop the pod
+dub stop nginx
+```
+
+## Key Learning Concepts
+
+1. **Pod Lifecycle**: See containers start/stop in real-time
+2. **Service Exposure**: Understand port forwarding vs load balancing
+3. **State Management**: Watch how orchestrator tracks running pods
+4. **Container Abstraction**: Learn the pod → container relationship
 
 ## Design Goals
 
-- **Transparency**: Every decision is visible and explained
-- **Simplicity**: Focus on core concepts without enterprise complexity
-- **Educational**: Show the "magic" behind container orchestration
-- **Hands-on**: Users can experiment and see immediate results
+- **Maximum Simplicity**: One process, minimal components
+- **Immediate Feedback**: Every command shows what happens
+- **Learning Focus**: Understand core concepts without complexity
+- **Hands-on**: Deploy, expose, and manage pods in minutes
