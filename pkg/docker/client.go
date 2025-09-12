@@ -179,3 +179,28 @@ func (c *DockerClient) RestartContainer(containerID string) error {
 	}
 	return nil
 }
+
+// ExecContainer executes a command inside a running container
+func (c *DockerClient) ExecContainer(containerID string, command ...string) (string, error) {
+	args := append([]string{"exec", containerID}, command...)
+	output, err := c.executor.Execute("docker", args...)
+	if err != nil {
+		return "", fmt.Errorf("failed to exec command in container %s: %w", containerID, err)
+	}
+	return output, nil
+}
+
+// RunContainerWithOptions runs a container with custom options
+func (c *DockerClient) RunContainerWithOptions(image string, options []string) (string, error) {
+	args := append([]string{"run"}, options...)
+	args = append(args, image)
+	
+	output, err := c.executor.Execute("docker", args...)
+	if err != nil {
+		return "", fmt.Errorf("failed to run container with options: %w", err)
+	}
+	
+	// Docker returns the container ID followed by a newline
+	containerID := strings.TrimSpace(output)
+	return containerID, nil
+}
