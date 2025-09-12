@@ -1,0 +1,26 @@
+# Default Dubernetes Configuration
+
+# Orchestrator API server configuration
+orchestrator:
+  port: 8080
+  host: "localhost"
+
+# Nginx proxy configuration  
+proxy:
+  port: 80
+  host: "localhost"
+  config_path: "/tmp/dubernetes-nginx.conf"
+
+# Container port allocation
+containers:
+  port_range_start: 32000
+  port_range_end: 32999
+
+# Database configuration
+database:
+  path: "./dubernetes.db"
+
+# Reconciliation loop settings
+reconciler:
+  interval: "10s"
+  max_restart_backoff: "5m"
