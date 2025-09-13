@@ -1,0 +1,4 @@
+name: background-worker
+image: python:3.9
+replicas: 1
+# No access config - this won't get ingress

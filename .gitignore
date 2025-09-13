@@ -1,0 +1,21 @@
+# Binaries
+dubectl
+cmd/orchestrator/orchestrator
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test files
+*.test
+coverage.out
+
+# Temporary files
+*.tmp
+*.log

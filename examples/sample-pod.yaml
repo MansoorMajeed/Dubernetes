@@ -1,0 +1,5 @@
+name: my-web-app
+image: nginx:latest
+replicas: 2
+access:
+  host: myapp.local
