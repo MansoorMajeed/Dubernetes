@@ -102,7 +102,9 @@ func generateUpstreamBlock(podName string, replicas []database.Replica) string {
 	upstream.WriteString(fmt.Sprintf("upstream %s {\n", podName))
 
 	for _, replica := range replicas {
-		upstream.WriteString(fmt.Sprintf("    server localhost:%d;\n", replica.Port))
+		if replica.IPAddress != "" {
+			upstream.WriteString(fmt.Sprintf("    server %s:80;\n", replica.IPAddress))
+		}
 	}
 
 	upstream.WriteString("}")

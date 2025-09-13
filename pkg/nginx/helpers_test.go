@@ -33,8 +33,21 @@ func TestGenerateConfigFromDatabase(t *testing.T) {
 			t.Fatalf("Failed to generate config from empty database: %v", err)
 		}
 
-		if config != "" {
-			t.Errorf("Expected empty config, got: %s", config)
+		expected := `events {
+    worker_connections 1024;
+}
+
+http {
+    server {
+        listen 80 default_server;
+        location / {
+            return 404 "No services available";
+        }
+    }
+}
+`
+		if config != expected {
+			t.Errorf("Expected default config, got: %s", config)
 		}
 	})
 
@@ -56,8 +69,8 @@ func TestGenerateConfigFromDatabase(t *testing.T) {
 
 		// Create replicas
 		replicas := []*database.Replica{
-			{PodName: "test-app", ReplicaID: "test-app-1", ContainerID: "container1", Port: 32001, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
-			{PodName: "test-app", ReplicaID: "test-app-2", ContainerID: "container2", Port: 32002, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+			{PodName: "test-app", ReplicaID: "test-app-1", ContainerID: "container1", IPAddress: "172.17.0.2", Port: 32001, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+			{PodName: "test-app", ReplicaID: "test-app-2", ContainerID: "container2", IPAddress: "172.17.0.3", Port: 32002, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		}
 
 		for _, replica := range replicas {
@@ -76,11 +89,11 @@ func TestGenerateConfigFromDatabase(t *testing.T) {
 		if !strings.Contains(config, "upstream test-app") {
 			t.Errorf("Config should contain upstream block for test-app")
 		}
-		if !strings.Contains(config, "server localhost:32001") {
-			t.Errorf("Config should contain replica on port 32001")
+		if !strings.Contains(config, "server 172.17.0.2:80") {
+			t.Errorf("Config should contain replica with IP 172.17.0.2")
 		}
-		if !strings.Contains(config, "server localhost:32002") {
-			t.Errorf("Config should contain replica on port 32002")
+		if !strings.Contains(config, "server 172.17.0.3:80") {
+			t.Errorf("Config should contain replica with IP 172.17.0.3")
 		}
 		if !strings.Contains(config, "server_name test.local") {
 			t.Errorf("Config should contain server_name test.local")

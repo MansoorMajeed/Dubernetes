@@ -204,3 +204,18 @@ func (c *DockerClient) RunContainerWithOptions(image string, options []string) (
 	containerID := strings.TrimSpace(output)
 	return containerID, nil
 }
+
+// GetContainerIP retrieves the IP address of a container
+func (c *DockerClient) GetContainerIP(containerID string) (string, error) {
+	output, err := c.executor.Execute("docker", "inspect", "--format={{.NetworkSettings.IPAddress}}", containerID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get container IP: %w", err)
+	}
+	
+	ip := strings.TrimSpace(output)
+	if ip == "" {
+		return "", fmt.Errorf("container %s has no IP address (may not be running)", containerID)
+	}
+	
+	return ip, nil
+}

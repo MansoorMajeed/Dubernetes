@@ -24,24 +24,30 @@ func TestGenerateNginxConfig(t *testing.T) {
 						Host:     "app.local",
 					},
 					Replicas: []database.Replica{
-						{PodName: "test-app", ContainerID: "container1", Port: 32001, Status: "running"},
+						{PodName: "test-app", ContainerID: "container1", IPAddress: "172.17.0.2", Port: 32001, Status: "running"},
 					},
 				},
 			},
-			expected: `upstream test-app {
-    server localhost:32001;
+			expected: `events {
+    worker_connections 1024;
 }
 
-server {
-    listen 80;
-    server_name app.local;
-    
-    location / {
-        proxy_pass http://test-app;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+http {
+    upstream test-app {
+        server 172.17.0.2:80;
+    }
+
+    server {
+        listen 80;
+        server_name app.local;
+        
+        location / {
+            proxy_pass http://test-app;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
     }
 }
 `,
@@ -58,28 +64,34 @@ server {
 						Host:     "multi.local",
 					},
 					Replicas: []database.Replica{
-						{PodName: "multi-app", ContainerID: "container1", Port: 32001, Status: "running"},
-						{PodName: "multi-app", ContainerID: "container2", Port: 32002, Status: "running"},
-						{PodName: "multi-app", ContainerID: "container3", Port: 32003, Status: "running"},
+						{PodName: "multi-app", ContainerID: "container1", IPAddress: "172.17.0.2", Port: 32001, Status: "running"},
+						{PodName: "multi-app", ContainerID: "container2", IPAddress: "172.17.0.3", Port: 32002, Status: "running"},
+						{PodName: "multi-app", ContainerID: "container3", IPAddress: "172.17.0.4", Port: 32003, Status: "running"},
 					},
 				},
 			},
-			expected: `upstream multi-app {
-    server localhost:32001;
-    server localhost:32002;
-    server localhost:32003;
+			expected: `events {
+    worker_connections 1024;
 }
 
-server {
-    listen 80;
-    server_name multi.local;
-    
-    location / {
-        proxy_pass http://multi-app;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+http {
+    upstream multi-app {
+        server 172.17.0.2:80;
+        server 172.17.0.3:80;
+        server 172.17.0.4:80;
+    }
+
+    server {
+        listen 80;
+        server_name multi.local;
+        
+        location / {
+            proxy_pass http://multi-app;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
     }
 }
 `,
@@ -96,7 +108,7 @@ server {
 						Host:     "app1.local",
 					},
 					Replicas: []database.Replica{
-						{PodName: "app1", ContainerID: "container1", Port: 32001, Status: "running"},
+						{PodName: "app1", ContainerID: "container1", IPAddress: "172.17.0.2", Port: 32001, Status: "running"},
 					},
 				},
 				{
@@ -107,43 +119,49 @@ server {
 						Host:     "app2.local",
 					},
 					Replicas: []database.Replica{
-						{PodName: "app2", ContainerID: "container2", Port: 32002, Status: "running"},
-						{PodName: "app2", ContainerID: "container3", Port: 32003, Status: "running"},
+						{PodName: "app2", ContainerID: "container2", IPAddress: "172.17.0.3", Port: 32002, Status: "running"},
+						{PodName: "app2", ContainerID: "container3", IPAddress: "172.17.0.4", Port: 32003, Status: "running"},
 					},
 				},
 			},
-			expected: `upstream app1 {
-    server localhost:32001;
+			expected: `events {
+    worker_connections 1024;
 }
 
-upstream app2 {
-    server localhost:32002;
-    server localhost:32003;
-}
-
-server {
-    listen 80;
-    server_name app1.local;
-    
-    location / {
-        proxy_pass http://app1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+http {
+    upstream app1 {
+        server 172.17.0.2:80;
     }
-}
 
-server {
-    listen 80;
-    server_name app2.local;
-    
-    location / {
-        proxy_pass http://app2;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    upstream app2 {
+        server 172.17.0.3:80;
+        server 172.17.0.4:80;
+    }
+
+    server {
+        listen 80;
+        server_name app1.local;
+        
+        location / {
+            proxy_pass http://app1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+
+    server {
+        listen 80;
+        server_name app2.local;
+        
+        location / {
+            proxy_pass http://app2;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
     }
 }
 `,
@@ -152,7 +170,19 @@ server {
 		{
 			name:     "empty pods list",
 			pods:     []PodWithReplicas{},
-			expected: "",
+			expected: `events {
+    worker_connections 1024;
+}
+
+http {
+    server {
+        listen 80 default_server;
+        location / {
+            return 404 "No services available";
+        }
+    }
+}
+`,
 			wantErr:  false,
 		},
 		{
@@ -166,11 +196,18 @@ server {
 						Host:     "",
 					},
 					Replicas: []database.Replica{
-						{PodName: "no-ingress", ContainerID: "container1", Port: 32001, Status: "running"},
+						{PodName: "no-ingress", ContainerID: "container1", IPAddress: "172.17.0.2", Port: 32001, Status: "running"},
 					},
 				},
 			},
-			expected: "",
+			expected: `events {
+    worker_connections 1024;
+}
+
+http {
+
+}
+`,
 			wantErr:  false,
 		},
 		{
@@ -184,11 +221,18 @@ server {
 						Host:     "failed.local",
 					},
 					Replicas: []database.Replica{
-						{PodName: "failed-app", ContainerID: "container1", Port: 32001, Status: "failed"},
+						{PodName: "failed-app", ContainerID: "container1", IPAddress: "172.17.0.2", Port: 32001, Status: "failed"},
 					},
 				},
 			},
-			expected: "",
+			expected: `events {
+    worker_connections 1024;
+}
+
+http {
+
+}
+`,
 			wantErr:  false,
 		},
 	}
@@ -225,7 +269,7 @@ func TestValidateNginxConfig(t *testing.T) {
 		{
 			name: "valid config",
 			config: `upstream app {
-    server localhost:32001;
+    server 172.17.0.2:80;
 }
 
 server {
@@ -246,7 +290,7 @@ server {
 		{
 			name: "invalid syntax",
 			config: `upstream app {
-    server localhost:32001
+    server 172.17.0.2:80
 }`,
 			wantErr: true,
 		},

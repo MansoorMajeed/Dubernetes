@@ -70,10 +70,10 @@ func TestNginxConfigIntegration(t *testing.T) {
 
 		// Create replicas for pods
 		replicas := []*database.Replica{
-			{PodName: "web-app", ReplicaID: "web-app-1", ContainerID: "container1", Port: 32001, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
-			{PodName: "web-app", ReplicaID: "web-app-2", ContainerID: "container2", Port: 32002, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
-			{PodName: "api-app", ReplicaID: "api-app-1", ContainerID: "container3", Port: 32003, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
-			{PodName: "worker-app", ReplicaID: "worker-app-1", ContainerID: "container4", Port: 32004, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+			{PodName: "web-app", ReplicaID: "web-app-1", ContainerID: "container1", IPAddress: "172.17.0.2", Port: 32001, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+			{PodName: "web-app", ReplicaID: "web-app-2", ContainerID: "container2", IPAddress: "172.17.0.3", Port: 32002, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+			{PodName: "api-app", ReplicaID: "api-app-1", ContainerID: "container3", IPAddress: "172.17.0.4", Port: 32003, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+			{PodName: "worker-app", ReplicaID: "worker-app-1", ContainerID: "container4", IPAddress: "172.17.0.5", Port: 32004, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		}
 
 		for _, replica := range replicas {
@@ -121,10 +121,10 @@ func TestNginxConfigIntegration(t *testing.T) {
 		// Check that config contains expected content
 		expected := []string{
 			"upstream web-app",
-			"server localhost:32001",
-			"server localhost:32002",
+			"server 172.17.0.2:80",
+			"server 172.17.0.3:80",
 			"upstream api-app",
-			"server localhost:32003",
+			"server 172.17.0.4:80",
 			"server_name web.local",
 			"server_name api.local",
 		}
@@ -164,9 +164,9 @@ func TestNginxConfigIntegration(t *testing.T) {
 
 		// Create replicas with different states
 		replicas := []*database.Replica{
-			{PodName: "mixed-app", ReplicaID: "mixed-app-1", ContainerID: "container1", Port: 32001, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
-			{PodName: "mixed-app", ReplicaID: "mixed-app-2", ContainerID: "container2", Port: 32002, Status: "failed", CreatedAt: time.Now(), UpdatedAt: time.Now()},
-			{PodName: "mixed-app", ReplicaID: "mixed-app-3", ContainerID: "container3", Port: 32003, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+			{PodName: "mixed-app", ReplicaID: "mixed-app-1", ContainerID: "container1", IPAddress: "172.17.0.2", Port: 32001, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+			{PodName: "mixed-app", ReplicaID: "mixed-app-2", ContainerID: "container2", IPAddress: "172.17.0.3", Port: 32002, Status: "failed", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+			{PodName: "mixed-app", ReplicaID: "mixed-app-3", ContainerID: "container3", IPAddress: "172.17.0.4", Port: 32003, Status: "running", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		}
 
 		for _, replica := range replicas {
@@ -211,14 +211,14 @@ func TestNginxConfigIntegration(t *testing.T) {
 		}
 
 		// Check that only running replicas are included
-		if !contains(config, "server localhost:32001") {
-			t.Errorf("Expected config to contain running replica on port 32001")
+		if !contains(config, "server 172.17.0.2:80") {
+			t.Errorf("Expected config to contain running replica with IP 172.17.0.2")
 		}
-		if !contains(config, "server localhost:32003") {
-			t.Errorf("Expected config to contain running replica on port 32003")
+		if !contains(config, "server 172.17.0.4:80") {
+			t.Errorf("Expected config to contain running replica with IP 172.17.0.4")
 		}
-		if contains(config, "server localhost:32002") {
-			t.Errorf("Config should not contain failed replica on port 32002")
+		if contains(config, "server 172.17.0.3:80") {
+			t.Errorf("Config should not contain failed replica with IP 172.17.0.3")
 		}
 	})
 }

@@ -29,6 +29,7 @@ type Replica struct {
 	PodName      string    `json:"pod_name"`
 	ReplicaID    string    `json:"replica_id"`
 	ContainerID  string    `json:"container_id"`
+	IPAddress    string    `json:"ip_address"`
 	Port         int       `json:"port"`
 	Status       string    `json:"status"`
 	RestartCount int       `json:"restart_count"`
@@ -83,6 +84,7 @@ func (db *Database) createTables() error {
 		replica_id TEXT PRIMARY KEY,
 		pod_name TEXT NOT NULL,
 		container_id TEXT,
+		ip_address TEXT,
 		port INTEGER NOT NULL,
 		status TEXT NOT NULL DEFAULT 'pending',
 		restart_count INTEGER NOT NULL DEFAULT 0,
@@ -208,10 +210,10 @@ func (db *Database) ListPods() ([]*Pod, error) {
 // CreateReplica creates a new replica in the database
 func (db *Database) CreateReplica(replica *Replica) error {
 	query := `
-	INSERT INTO replicas (replica_id, pod_name, container_id, port, status, restart_count, created_at, updated_at)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+	INSERT INTO replicas (replica_id, pod_name, container_id, ip_address, port, status, restart_count, created_at, updated_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	_, err := db.conn.Exec(query, replica.ReplicaID, replica.PodName, replica.ContainerID, replica.Port, replica.Status, replica.RestartCount, replica.CreatedAt, replica.UpdatedAt)
+	_, err := db.conn.Exec(query, replica.ReplicaID, replica.PodName, replica.ContainerID, replica.IPAddress, replica.Port, replica.Status, replica.RestartCount, replica.CreatedAt, replica.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create replica: %w", err)
 	}
@@ -222,13 +224,13 @@ func (db *Database) CreateReplica(replica *Replica) error {
 // GetReplica retrieves a replica by ID
 func (db *Database) GetReplica(replicaID string) (*Replica, error) {
 	query := `
-	SELECT replica_id, pod_name, container_id, port, status, restart_count, created_at, updated_at
+	SELECT replica_id, pod_name, container_id, ip_address, port, status, restart_count, created_at, updated_at
 	FROM replicas WHERE replica_id = ?`
 
 	row := db.conn.QueryRow(query, replicaID)
 
 	replica := &Replica{}
-	err := row.Scan(&replica.ReplicaID, &replica.PodName, &replica.ContainerID, &replica.Port, &replica.Status, &replica.RestartCount, &replica.CreatedAt, &replica.UpdatedAt)
+	err := row.Scan(&replica.ReplicaID, &replica.PodName, &replica.ContainerID, &replica.IPAddress, &replica.Port, &replica.Status, &replica.RestartCount, &replica.CreatedAt, &replica.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("replica not found: %s", replicaID)
@@ -242,10 +244,10 @@ func (db *Database) GetReplica(replicaID string) (*Replica, error) {
 // UpdateReplica updates an existing replica
 func (db *Database) UpdateReplica(replica *Replica) error {
 	query := `
-	UPDATE replicas SET container_id = ?, port = ?, status = ?, restart_count = ?, updated_at = ?
+	UPDATE replicas SET container_id = ?, ip_address = ?, port = ?, status = ?, restart_count = ?, updated_at = ?
 	WHERE replica_id = ?`
 
-	result, err := db.conn.Exec(query, replica.ContainerID, replica.Port, replica.Status, replica.RestartCount, replica.UpdatedAt, replica.ReplicaID)
+	result, err := db.conn.Exec(query, replica.ContainerID, replica.IPAddress, replica.Port, replica.Status, replica.RestartCount, replica.UpdatedAt, replica.ReplicaID)
 	if err != nil {
 		return fmt.Errorf("failed to update replica: %w", err)
 	}
@@ -286,7 +288,7 @@ func (db *Database) DeleteReplica(replicaID string) error {
 // ListReplicasForPod retrieves all replicas for a specific pod
 func (db *Database) ListReplicasForPod(podName string) ([]*Replica, error) {
 	query := `
-	SELECT replica_id, pod_name, container_id, port, status, restart_count, created_at, updated_at
+	SELECT replica_id, pod_name, container_id, ip_address, port, status, restart_count, created_at, updated_at
 	FROM replicas WHERE pod_name = ? ORDER BY replica_id`
 
 	rows, err := db.conn.Query(query, podName)
@@ -298,7 +300,7 @@ func (db *Database) ListReplicasForPod(podName string) ([]*Replica, error) {
 	var replicas []*Replica
 	for rows.Next() {
 		replica := &Replica{}
-		err := rows.Scan(&replica.ReplicaID, &replica.PodName, &replica.ContainerID, &replica.Port, &replica.Status, &replica.RestartCount, &replica.CreatedAt, &replica.UpdatedAt)
+		err := rows.Scan(&replica.ReplicaID, &replica.PodName, &replica.ContainerID, &replica.IPAddress, &replica.Port, &replica.Status, &replica.RestartCount, &replica.CreatedAt, &replica.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan replica: %w", err)
 		}

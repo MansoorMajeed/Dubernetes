@@ -222,8 +222,16 @@ func (r *Reconciler) createReplica(pod *database.Pod) error {
 		return fmt.Errorf("failed to create container: %w", err)
 	}
 
-	// Update replica with container ID and status
+	// Get container IP address
+	ipAddress, err := r.docker.GetContainerIP(containerID)
+	if err != nil {
+		log.Printf("Failed to get IP for container %s: %v", containerID, err)
+		// Continue without IP address for now
+	}
+
+	// Update replica with container ID, IP address and status
 	replica.ContainerID = containerID
+	replica.IPAddress = ipAddress
 	replica.Status = "running"
 	replica.UpdatedAt = time.Now()
 
@@ -273,8 +281,16 @@ func (r *Reconciler) restartReplica(pod *database.Pod, replica *database.Replica
 		return fmt.Errorf("failed to restart container: %w", err)
 	}
 
+	// Get container IP address
+	ipAddress, err := r.docker.GetContainerIP(containerID)
+	if err != nil {
+		log.Printf("Failed to get IP for restarted container %s: %v", containerID, err)
+		// Continue without IP address for now
+	}
+
 	// Update replica
 	replica.ContainerID = containerID
+	replica.IPAddress = ipAddress
 	replica.Status = "running"
 	replica.RestartCount++
 	replica.UpdatedAt = time.Now()

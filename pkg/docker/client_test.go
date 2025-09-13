@@ -424,3 +424,84 @@ func TestDockerLabels(t *testing.T) {
 		}
 	}
 }
+
+func TestGetContainerIP(t *testing.T) {
+	tests := []struct {
+		name          string
+		containerID   string
+		expectedIP    string
+		mockOutput    string
+		mockError     error
+		wantErr       bool
+	}{
+		{
+			name:        "successful IP retrieval",
+			containerID: "container123",
+			expectedIP:  "172.17.0.2",
+			mockOutput:  "172.17.0.2",
+			wantErr:     false,
+		},
+		{
+			name:        "container not found",
+			containerID: "nonexistent",
+			mockError:   errors.New("No such container"),
+			wantErr:     true,
+		},
+		{
+			name:        "empty IP address",
+			containerID: "container456",
+			mockOutput:  "",
+			wantErr:     true,
+		},
+		{
+			name:        "IP with whitespace",
+			containerID: "container789",
+			expectedIP:  "172.17.0.3",
+			mockOutput:  "  172.17.0.3  \n",
+			wantErr:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			executor := NewMockExecutor()
+			client := NewDockerClient(executor)
+
+			expectedCmd := fmt.Sprintf("docker inspect --format={{.NetworkSettings.IPAddress}} %s", tt.containerID)
+			
+			if tt.mockError != nil {
+				executor.SetError(expectedCmd, tt.mockError)
+			} else {
+				executor.SetOutput(expectedCmd, tt.mockOutput)
+			}
+
+			ip, err := client.GetContainerIP(tt.containerID)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("GetContainerIP() expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("GetContainerIP() unexpected error: %v", err)
+				return
+			}
+
+			if ip != tt.expectedIP {
+				t.Errorf("GetContainerIP() = %s, want %s", ip, tt.expectedIP)
+			}
+
+			// Verify correct command was executed
+			commands := executor.GetCommands()
+			if len(commands) != 1 {
+				t.Fatalf("Expected 1 command, got %d", len(commands))
+			}
+
+			if commands[0] != expectedCmd {
+				t.Errorf("Expected command %s, got %s", expectedCmd, commands[0])
+			}
+		})
+	}
+}

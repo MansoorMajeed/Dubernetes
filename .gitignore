@@ -6,6 +6,7 @@ cmd/orchestrator/orchestrator
 .DS_Store
 Thumbs.db
 
+dubernetes.db
 # IDE files
 .vscode/
 .idea/
