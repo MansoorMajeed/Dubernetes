@@ -12,10 +12,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# Test files
-*.test
-coverage.out
 
 # Temporary files
 *.tmp
 *.log
+
+bin/
