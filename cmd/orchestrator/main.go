@@ -210,35 +210,43 @@ func (o *OrchestratorImpl) ListPods(ctx context.Context) ([]api.PodSummary, erro
 
 // DeletePod deletes a pod
 func (o *OrchestratorImpl) DeletePod(ctx context.Context, name string) error {
-	// First, mark the pod as stopped to trigger cleanup
-	dbPod, err := o.db.GetPod(name)
+	// Verify the pod exists
+	_, err := o.db.GetPod(name)
 	if err != nil {
 		return err
 	}
 
-	dbPod.DesiredState = "stopped"
-	dbPod.UpdatedAt = time.Now()
-
-	if err := o.db.UpdatePod(dbPod); err != nil {
-		return fmt.Errorf("failed to mark pod as stopped: %w", err)
-	}
-
-	// Give reconciler a moment to clean up containers
-	time.Sleep(2 * time.Second)
-
-	// Delete all replicas first
+	// Get all replicas for the pod
 	replicas, err := o.db.ListReplicasForPod(name)
 	if err != nil {
 		return fmt.Errorf("failed to list replicas: %w", err)
 	}
 
+	// Stop and remove all containers first
 	for _, replica := range replicas {
+		if replica.ContainerID != "" {
+			log.Printf("Stopping container %s for replica %s", replica.ContainerID, replica.ReplicaID)
+			
+			// Stop the container
+			if err := o.dockerClient.StopContainer(replica.ContainerID); err != nil {
+				log.Printf("Failed to stop container %s: %v", replica.ContainerID, err)
+				// Continue trying to clean up other containers
+			}
+			
+			// Remove the container
+			if err := o.dockerClient.RemoveContainer(replica.ContainerID); err != nil {
+				log.Printf("Failed to remove container %s: %v", replica.ContainerID, err)
+				// Continue trying to clean up other containers
+			}
+		}
+
+		// Delete replica from database
 		if err := o.db.DeleteReplica(replica.ReplicaID); err != nil {
 			log.Printf("Failed to delete replica %s: %v", replica.ReplicaID, err)
 		}
 	}
 
-	// Delete the pod
+	// Delete the pod from database
 	return o.db.DeletePod(name)
 }
 
