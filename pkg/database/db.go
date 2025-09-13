@@ -97,6 +97,49 @@ func (db *Database) createTables() error {
 		return fmt.Errorf("failed to create replicas table: %w", err)
 	}
 
+	// Run migrations to add new columns to existing tables
+	if err := db.runMigrations(); err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	return nil
+}
+
+// runMigrations applies any necessary schema migrations
+func (db *Database) runMigrations() error {
+	// Check if ip_address column exists in replicas table
+	var columnExists bool
+	query := "PRAGMA table_info(replicas)"
+	rows, err := db.conn.Query(query)
+	if err != nil {
+		return fmt.Errorf("failed to check table schema: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name, dataType string
+		var notNull, pk int
+		var defaultValue interface{}
+		
+		if err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultValue, &pk); err != nil {
+			return fmt.Errorf("failed to scan column info: %w", err)
+		}
+		
+		if name == "ip_address" {
+			columnExists = true
+			break
+		}
+	}
+
+	// Add ip_address column if it doesn't exist
+	if !columnExists {
+		alterQuery := "ALTER TABLE replicas ADD COLUMN ip_address TEXT"
+		if _, err := db.conn.Exec(alterQuery); err != nil {
+			return fmt.Errorf("failed to add ip_address column: %w", err)
+		}
+	}
+
 	return nil
 }
 
