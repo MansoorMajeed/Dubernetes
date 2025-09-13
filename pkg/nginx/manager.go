@@ -17,10 +17,14 @@ type Manager struct {
 
 // NewManager creates a new nginx manager
 func NewManager(cfg *config.Config, dockerClient *docker.DockerClient) *Manager {
+	configPath := cfg.Proxy.ConfigPath
+	if configPath == "" {
+		configPath = "/tmp/dubernetes-nginx.conf"
+	}
 	return &Manager{
 		config:     cfg,
 		docker:     dockerClient,
-		configPath: "/tmp/dubernetes-nginx.conf",
+		configPath: configPath,
 	}
 }
 
@@ -134,6 +138,14 @@ func (m *Manager) UpdateConfig(nginxConfig string) error {
 	isRunning, err := m.IsRunning()
 	if err != nil {
 		return fmt.Errorf("failed to check if nginx is running: %w", err)
+	}
+
+	// If nginx is not running, start it
+	if !isRunning {
+		if err := m.Start(); err != nil {
+			return fmt.Errorf("failed to start nginx: %w", err)
+		}
+		return nil // Config is already loaded when starting
 	}
 
 	// If nginx is running, test and reload the config

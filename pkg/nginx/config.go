@@ -15,8 +15,23 @@ type PodWithReplicas struct {
 
 // GenerateNginxConfig generates nginx configuration from pod and replica data
 func GenerateNginxConfig(pods []PodWithReplicas) (string, error) {
+	// Start with basic nginx config structure
+	var config strings.Builder
+	config.WriteString("events {\n")
+	config.WriteString("    worker_connections 1024;\n")
+	config.WriteString("}\n\n")
+	config.WriteString("http {\n")
+	
 	if len(pods) == 0 {
-		return "", nil
+		// Return basic config with default server
+		config.WriteString("    server {\n")
+		config.WriteString("        listen 80 default_server;\n")
+		config.WriteString("        location / {\n")
+		config.WriteString("            return 404 \"No services available\";\n")
+		config.WriteString("        }\n")
+		config.WriteString("    }\n")
+		config.WriteString("}\n")
+		return config.String(), nil
 	}
 
 	var upstreams []string
@@ -53,11 +68,10 @@ func GenerateNginxConfig(pods []PodWithReplicas) (string, error) {
 		servers = append(servers, server)
 	}
 
-	// Combine upstreams and servers
-	var config strings.Builder
-	
+	// Add upstreams to http block
 	for i, upstream := range upstreams {
-		config.WriteString(upstream)
+		config.WriteString("    ")
+		config.WriteString(strings.ReplaceAll(upstream, "\n", "\n    "))
 		if i < len(upstreams)-1 {
 			config.WriteString("\n\n")
 		}
@@ -67,17 +81,17 @@ func GenerateNginxConfig(pods []PodWithReplicas) (string, error) {
 		config.WriteString("\n\n")
 	}
 
+	// Add servers to http block
 	for i, server := range servers {
-		config.WriteString(server)
+		config.WriteString("    ")
+		config.WriteString(strings.ReplaceAll(server, "\n", "\n    "))
 		if i < len(servers)-1 {
 			config.WriteString("\n\n")
 		}
 	}
 
-	// Add trailing newline if there's content
-	if config.Len() > 0 {
-		config.WriteString("\n")
-	}
+	// Close http block
+	config.WriteString("\n}\n")
 
 	return config.String(), nil
 }
