@@ -20,6 +20,12 @@ is all done by claude.
 - Route traffic by hostname (like app.local)
 
 ## Architecture
+
+### Overview
+
+![Architecture diagram](./architecture-diagram.png)
+
+### Detailed
 ```mermaid
 graph TB
     CLI["CLI<br/>(dubectl)"]
