@@ -1,10 +1,11 @@
 # Dubernetes
 
-A simplified container orchestration system for learning how Kubernetes works behind the scenes.
+A simple and dumb container orchestration tool using Docker. This is a purely vibe coded (TDD) tool for learning
+purposes, do not use it for anything other than that
 
 ## What it does
 
-- Deploy containers using simple YAML files
+- Deploy docker containers using simple YAML files
 - Automatically restart failed containers
 - Load balance traffic across multiple replicas
 - Route traffic by hostname (like app.local)
@@ -28,7 +29,7 @@ make build
 
 3. Deploy a pod:
 ```bash
-./bin/dubectl apply examples/sample-pod.yaml
+./bin/dubectl apply examples/whoami-service.yaml
 ```
 
 4. Check running pods:
@@ -39,7 +40,7 @@ make build
 5. Test your app:
 ```bash
 # Without modifying /etc/hosts
-curl --resolve myapp.local:80:127.0.0.1 http://myapp.local
+curl http://myapp.local --resolve myapp.local:80:127.0.0.1
 
 # Or add to /etc/hosts for browser access
 echo "127.0.0.1 myapp.local" >> /etc/hosts
@@ -48,18 +49,18 @@ echo "127.0.0.1 myapp.local" >> /etc/hosts
 ## YAML Format
 
 ```yaml
-name: my-app
-image: nginx:latest
-replicas: 2
+name: whoami-service
+image: traefik/whoami
+replicas: 3
 access:
-  host: myapp.local
+  host: whoami.local
 ```
 
 ## Commands
 
 - `dubectl apply <file>` - Deploy pods from YAML
 - `dubectl get pods` - List running pods  
-- `dubectl delete <name>` - Remove pods
+- `dubectl delete pods <name>` - Remove pods
 
 ## How it works
 

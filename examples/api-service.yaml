@@ -1,5 +1,0 @@
-name: api-service  
-image: node:14
-replicas: 3
-access:
-  host: api.local

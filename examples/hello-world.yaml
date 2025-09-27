@@ -1,5 +1,0 @@
-name: go-hello-world
-image: mansoor1/go-hello-world:latest
-replicas: 2
-access:
-  host: hello.local
