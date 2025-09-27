@@ -1,5 +1,4 @@
 # Binaries
-dubectl
 cmd/orchestrator/orchestrator
 
 # OS files
