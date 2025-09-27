@@ -1,0 +1,5 @@
+name: whoami-service
+image: traefik/whoami
+replicas: 3
+access:
+  host: whoami.local

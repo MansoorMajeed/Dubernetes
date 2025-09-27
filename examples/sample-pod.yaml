@@ -1,5 +1,5 @@
 name: my-web-app
-image: nginx:latest
+image: kennethreitz/httpbin
 replicas: 2
 access:
   host: myapp.local
