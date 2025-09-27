@@ -3,7 +3,9 @@ package docker
 import (
 	"fmt"
 	"os/exec"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -102,11 +104,29 @@ func (c *DockerClient) IsContainerRunning(containerID string) (bool, error) {
 
 // AllocatePort finds an available port from the given range
 func (c *DockerClient) AllocatePort(usedPorts []int, portStart, portEnd int) (int, error) {
-	// Sort used ports for efficient lookup
-	sort.Ints(usedPorts)
+	// Get ports actually in use by Docker containers
+	dockerPorts, err := c.GetUsedPortsFromContainers()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get used ports from containers: %w", err)
+	}
+
+	// Combine database ports and actual Docker ports
+	allUsedPorts := append(usedPorts, dockerPorts...)
+
+	// Remove duplicates and sort
+	portMap := make(map[int]bool)
+	for _, port := range allUsedPorts {
+		portMap[port] = true
+	}
+
+	var uniquePorts []int
+	for port := range portMap {
+		uniquePorts = append(uniquePorts, port)
+	}
+	sort.Ints(uniquePorts)
 
 	for port := portStart; port <= portEnd; port++ {
-		if !c.IsPortInUse(port, usedPorts) {
+		if !c.IsPortInUse(port, uniquePorts) {
 			return port, nil
 		}
 	}
@@ -218,4 +238,37 @@ func (c *DockerClient) GetContainerIP(containerID string) (string, error) {
 	}
 	
 	return ip, nil
+}
+
+// GetUsedPortsFromContainers returns a list of ports actually in use by running containers
+func (c *DockerClient) GetUsedPortsFromContainers() ([]int, error) {
+	// Get all running containers with port mappings
+	output, err := c.executor.Execute("docker", "ps", "--format", "{{.Ports}}")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list container ports: %w", err)
+	}
+
+	var usedPorts []int
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		// Parse port mappings like "0.0.0.0:32000->80/tcp, [::]:32000->80/tcp"
+		// Extract host ports using regex
+		re := regexp.MustCompile(`0\.0\.0\.0:(\d+)->`)
+		matches := re.FindAllStringSubmatch(line, -1)
+
+		for _, match := range matches {
+			if len(match) > 1 {
+				if port, err := strconv.Atoi(match[1]); err == nil {
+					usedPorts = append(usedPorts, port)
+				}
+			}
+		}
+	}
+
+	return usedPorts, nil
 }
