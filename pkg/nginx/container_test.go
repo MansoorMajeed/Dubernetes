@@ -271,6 +271,9 @@ server {
 		// Mock nginx not running
 		mockExecutor.SetOutput("docker ps -q --filter label=dubernetes.component=nginx-proxy", "")
 
+		// Mock docker run command for starting nginx
+		mockExecutor.SetOutput("docker run -d --name dubernetes-nginx -p 80:80 --label dubernetes.component=nginx-proxy --restart=unless-stopped -v /tmp/dubernetes-nginx.conf:/etc/nginx/nginx.conf nginx:latest", "nginx-container-123")
+
 		// Test updating config when nginx is not running
 		err := manager.UpdateConfig(nginxConfig)
 		if err != nil {

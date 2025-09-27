@@ -29,20 +29,20 @@ func NewMockExecutor() *MockExecutor {
 }
 
 func (m *MockExecutor) Execute(command string, args ...string) (string, error) {
-	fullCmd := command + " " + args[0] // simplified for testing
-	for _, arg := range args[1:] {
+	fullCmd := command
+	for _, arg := range args {
 		fullCmd += " " + arg
 	}
 	m.commands = append(m.commands, fullCmd)
-	
+
 	if err, exists := m.errors[fullCmd]; exists {
 		return "", err
 	}
-	
+
 	if output, exists := m.outputs[fullCmd]; exists {
 		return output, nil
 	}
-	
+
 	return "", nil
 }
 
@@ -106,16 +106,23 @@ func TestReconciler(t *testing.T) {
 			t.Fatalf("Reconciliation failed: %v", err)
 		}
 
-		// Should only have nginx update command
+		// Should have docker ps to check nginx status and docker run to start nginx
 		commands := mockExecutor.GetCommands()
-		nginxCommands := 0
+		nginxCheckCommands := 0
+		nginxStartCommands := 0
 		for _, cmd := range commands {
-			if strings.Contains(cmd, "nginx-proxy") {
-				nginxCommands++
+			if strings.Contains(cmd, "docker ps -q --filter label=dubernetes.component=nginx-proxy") {
+				nginxCheckCommands++
+			}
+			if strings.Contains(cmd, "docker run") && strings.Contains(cmd, "nginx-proxy") {
+				nginxStartCommands++
 			}
 		}
-		if nginxCommands != 1 {
-			t.Errorf("Expected 1 nginx update command, got %d total commands: %v", len(commands), commands)
+		if nginxCheckCommands != 1 {
+			t.Errorf("Expected 1 nginx check command, got %d. Commands: %v", nginxCheckCommands, commands)
+		}
+		if nginxStartCommands != 1 {
+			t.Errorf("Expected 1 nginx start command, got %d. Commands: %v", nginxStartCommands, commands)
 		}
 	})
 

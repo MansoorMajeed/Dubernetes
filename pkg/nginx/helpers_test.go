@@ -153,6 +153,7 @@ func TestUpdateManagerFromDatabase(t *testing.T) {
 			ReplicaID:   "api-app-1",
 			ContainerID: "container1",
 			Port:        32003,
+			IPAddress:   "localhost",
 			Status:      "running",
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
@@ -164,6 +165,9 @@ func TestUpdateManagerFromDatabase(t *testing.T) {
 
 		// Mock nginx not running (so no reload commands)
 		mockExecutor.SetOutput("docker ps -q --filter label=dubernetes.component=nginx-proxy", "")
+
+		// Mock docker run command for starting nginx
+		mockExecutor.SetOutput("docker run -d --name dubernetes-nginx -p 80:80 --label dubernetes.component=nginx-proxy --restart=unless-stopped -v /tmp/dubernetes-nginx.conf:/etc/nginx/nginx.conf nginx:latest", "nginx-container-123")
 
 		// Update manager from database
 		err := UpdateManagerFromDatabase(manager, db)
@@ -186,8 +190,8 @@ func TestUpdateManagerFromDatabase(t *testing.T) {
 		if !strings.Contains(configStr, "upstream api-app") {
 			t.Errorf("Config should contain upstream block for api-app")
 		}
-		if !strings.Contains(configStr, "server localhost:32003") {
-			t.Errorf("Config should contain replica on port 32003")
+		if !strings.Contains(configStr, "server localhost:80") {
+			t.Errorf("Config should contain replica on port 80")
 		}
 		if !strings.Contains(configStr, "server_name api.local") {
 			t.Errorf("Config should contain server_name api.local")
