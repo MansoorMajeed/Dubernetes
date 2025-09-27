@@ -53,6 +53,16 @@ func main() {
 	// Initialize Nginx manager
 	nginxManager := nginx.NewManager(cfg, dockerClient)
 
+	// Handle existing nginx container on startup
+	log.Println("Checking for existing nginx containers...")
+	isRunning, err := nginxManager.IsRunning()
+	if err != nil {
+		log.Printf("Warning: Failed to check nginx status: %v", err)
+	} else if isRunning {
+		log.Println("Found existing nginx container, taking ownership")
+		// We could restart to ensure clean state, but for now just acknowledge it
+	}
+
 	// Initialize orchestrator (for API)
 	orchestrator := &OrchestratorImpl{
 		db:           db,
@@ -127,6 +137,14 @@ func main() {
 		log.Println("All components stopped successfully")
 	case <-time.After(10 * time.Second):
 		log.Println("Shutdown timeout reached, forcing exit")
+	}
+
+	// Clean up nginx container
+	log.Println("Cleaning up nginx container...")
+	if err := nginxManager.Stop(); err != nil {
+		log.Printf("Warning: Failed to stop nginx container: %v", err)
+	} else {
+		log.Println("Nginx container stopped successfully")
 	}
 
 	log.Println("Dubernetes Orchestrator stopped")
